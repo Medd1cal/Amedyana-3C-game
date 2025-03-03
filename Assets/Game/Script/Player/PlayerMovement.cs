@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using UnityEngine;
 
 public class PlayerMovement : MonoBehaviour
@@ -51,6 +52,12 @@ public class PlayerMovement : MonoBehaviour
     private float _climbSpeed;
 
     [SerializeField]
+    private Transform _cameraTransform;
+
+    [SerializeField]
+    private CameraManager _cameraManager;
+
+    [SerializeField]
     private float _rotationSmoothTime = 0.1f;
     
 
@@ -65,6 +72,7 @@ public class PlayerMovement : MonoBehaviour
         _rigidbody = GetComponent<Rigidbody>();
         _speed = _walkSpeed;
         _playerStance = PlayerStance.Stand;
+        HideAndLockCursor();
     }
 
 
@@ -92,6 +100,12 @@ public class PlayerMovement : MonoBehaviour
         CheckStep();
     }
 
+    private void HideAndLockCursor()
+    {
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+    }
+
     private void Move (Vector2 axisDirection)
     {
         Vector3 movementDirection = Vector3.zero;
@@ -99,13 +113,28 @@ public class PlayerMovement : MonoBehaviour
         bool isPlayerClimbing = _playerStance == PlayerStance.Climb;
         if (isPlayerStanding)
         {
-            if (axisDirection.magnitude >= 0.1)
+            switch (_cameraManager.CameraState)
             {
-                float rotationAngle = Mathf.Atan2(axisDirection.x, axisDirection.y) * Mathf.Rad2Deg;
-                float smoothAngle = Mathf.SmoothDampAngle(transform.eulerAngles.y, rotationAngle, ref _rotationSmoothVelocity, _rotationSmoothTime);
-                transform.rotation = Quaternion.Euler(0f, smoothAngle, 0f);
-                movementDirection = Quaternion.Euler(0f, rotationAngle, 0f) * Vector3.forward;
-                _rigidbody.AddForce(movementDirection * _speed * Time.deltaTime); 
+                case CameraState.ThirdPerson:
+                     if (axisDirection.magnitude >= 0.1)
+                     {
+                        float rotationAngle = Mathf.Atan2(axisDirection.x, axisDirection.y) * Mathf.Rad2Deg + _cameraTransform.eulerAngles.y;
+                        float smoothAngle = Mathf.SmoothDampAngle(transform.eulerAngles.y, rotationAngle, ref _rotationSmoothVelocity, _rotationSmoothTime);
+                        transform.rotation = Quaternion.Euler(0f, smoothAngle, 0f);
+                        movementDirection = Quaternion.Euler(0f, rotationAngle, 0f) * Vector3.forward;
+                        _rigidbody.AddForce(movementDirection * _speed * Time.deltaTime); 
+                     }
+                    break;
+                case CameraState.FirstPerson:
+                    transform.rotation = Quaternion.Euler(0f, _cameraTransform.eulerAngles.y, 0f);
+                    Vector3 verticalDirection = axisDirection.y * transform.forward;
+                    Vector3 horizontalDirection = axisDirection.x * transform.right;
+                    movementDirection = verticalDirection + horizontalDirection;
+                    _rigidbody.AddForce(movementDirection * _speed * Time.deltaTime);
+                    break;
+                default:
+                    break;
+                
             }
         }
         else if (isPlayerClimbing)
@@ -163,16 +192,16 @@ public class PlayerMovement : MonoBehaviour
     private void StartClimb()
     {
         bool isFrontOfClimbWall = Physics.Raycast(_climbDetector.position, transform.forward, out RaycastHit hit, _climbCheckDistance, _climbableLayer);
-        Debug.Log(isFrontOfClimbWall);
         bool isNotClimbing = _playerStance != PlayerStance.Climb;
         if (isFrontOfClimbWall && _isGrounded && isNotClimbing)
         {
-            Debug.Log("StartClimb");
             Vector3 offset = (transform.forward * _climbOffset.z) + (Vector3.up * _climbOffset.y);
             transform.position = hit.point - offset;
             _playerStance = PlayerStance.Climb;
             _rigidbody.useGravity = false;
             _speed = _climbSpeed;
+            _cameraManager.SetFPSClampedCamera(true,transform.rotation.eulerAngles);
+            _cameraManager.SetTPSFieldOfView(70);
         }
     }
 
@@ -184,6 +213,8 @@ public class PlayerMovement : MonoBehaviour
             _rigidbody.useGravity = true;
             transform.position -= transform.forward;
             _speed = _walkSpeed;
+            _cameraManager.SetFPSClampedCamera(false,transform.rotation.eulerAngles);
+            _cameraManager.SetTPSFieldOfView(40);
         }
     }
 }

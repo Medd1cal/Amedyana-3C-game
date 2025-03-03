@@ -8,6 +8,7 @@ public class InputManager : MonoBehaviour
     public Action OnJumpInput;
     public Action onClimbInput;
     public Action onCancelClimb;
+    public Action onChangePOV;
    private void Update()
     {
      CheckMovementInput();
@@ -67,7 +68,10 @@ public class InputManager : MonoBehaviour
     bool isPressChangePOVInput =  Input.GetKeyDown(KeyCode.Q);
     if (isPressChangePOVInput)
     {
-        Debug.Log("ChangePOV");
+        if (onChangePOV != null)
+        {
+            onChangePOV();
+        }
     }
    }
    private void CheckClimbInput()
