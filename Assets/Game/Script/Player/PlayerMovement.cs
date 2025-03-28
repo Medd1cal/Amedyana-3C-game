@@ -1,7 +1,7 @@
 using System.Collections;
 using UnityEngine;
 
-public class PlayerMovement : MonoBehaviour
+public class vement : MonoBehaviour
 {
     [SerializeField]
     private float _walkSpeed;
@@ -98,6 +98,9 @@ public class PlayerMovement : MonoBehaviour
 
     [SerializeField]
     private LayerMask _hitLayer;
+
+     [SerializeField]
+    private PlayerAudioManager _playerAudioManager; 
     
 
     private Rigidbody _rigidbody;
@@ -347,6 +350,7 @@ public class PlayerMovement : MonoBehaviour
             _playerStance = PlayerStance.Glide;
             _animator.SetBool("IsGliding", true);
             _cameraManager.SetFPSClampedCamera(true,transform.rotation.eulerAngles);
+            _playerAudioManager.PlayGlideSFX();
         }
     }
 
@@ -357,6 +361,7 @@ public class PlayerMovement : MonoBehaviour
             _playerStance = PlayerStance.Stand; 
             _animator.SetBool("IsGliding", false);
             _cameraManager.SetFPSClampedCamera(false,transform.rotation.eulerAngles);
+            _playerAudioManager.StopGlideSFX();
         }
     }
 
